@@ -30,7 +30,7 @@ export interface FeatureSegment {
   cameraPosition: CameraPosition
 }
 
-// Enhanced feature segments with responsive camera positions for 360-degree orbit
+// Enhanced feature segments with precise marker positions close to watch components
 export const featureSegments: FeatureSegment[] = [
   {
     id: 'display',
@@ -38,7 +38,7 @@ export const featureSegments: FeatureSegment[] = [
     description: 'Ultra-clear AMOLED display with adaptive brightness for perfect visibility in any lighting conditions.',
     startProgress: 0,
     endProgress: 0.2,
-    markerPosition: [0, 0.5, 0.8],
+    markerPosition: [-0.15, 0, 0.1], // Close to watch face center
     markerColor: '#D4AF37',
     cameraPosition: { x: 0, y: 0, z: 5, lookAtX: 0, lookAtY: 0, lookAtZ: 0 }
   },
@@ -48,7 +48,7 @@ export const featureSegments: FeatureSegment[] = [
     description: 'USB-C charging slot with seamless integration for efficient and secure docking.',
     startProgress: 0.2,
     endProgress: 0.35,
-    markerPosition: [1.2, -0.2, 0],
+    markerPosition: [0.55, -0.2, 0], // Close to right side where USB typically is
     markerColor: '#D4AF37',
     cameraPosition: { x: 5, y: 0, z: 0, lookAtX: 0, lookAtY: 0, lookAtZ: 0 }
   },
@@ -58,7 +58,7 @@ export const featureSegments: FeatureSegment[] = [
     description: 'Precision rotary crown with shortcut support for effortless navigation and control.',
     startProgress: 0.35,
     endProgress: 0.5,
-    markerPosition: [1, 0.45, -0.6],
+    markerPosition: [0.55, 0.2, -0.3], // Close to crown position on right side
     markerColor: '#D4AF37',
     cameraPosition: { x: 5, y: 0, z: 0, lookAtX: 0, lookAtY: 0, lookAtZ: 0 } // Same as USB slot
   },
@@ -68,7 +68,7 @@ export const featureSegments: FeatureSegment[] = [
     description: 'Optical sensor for continuous heart rate monitoring and accurate health insights.',
     startProgress: 0.5,
     endProgress: 0.7,
-    markerPosition: [0, -0.2, -0.6],
+    markerPosition: [-0.1, -0.1, -0.4], // Close to back center where sensors are
     markerColor: '#D4AF37',
     cameraPosition: { x: 2, y: 0.5, z: -2, lookAtX: 0, lookAtY: 0, lookAtZ: 0 }
   },
@@ -78,7 +78,7 @@ export const featureSegments: FeatureSegment[] = [
     description: 'Adjustable fit clasp and interchangeable straps for comfort and personalization.',
     startProgress: 0.7,
     endProgress: 0.9,
-    markerPosition: [-0.5, 1, -4],
+    markerPosition: [-0.2, 0.5, -1.8], // Close to strap attachment points
     markerColor: '#D4AF37',
     cameraPosition: { x: 0, y: 4, z: -8, lookAtX: 0, lookAtY: 0, lookAtZ: 0 }
   },
@@ -163,12 +163,9 @@ function calculateCameraPosition(progress: number): CameraPosition {
   const responsiveY = y * (mobile ? height / 10 : 1)
   const responsiveZ = z * (mobile ? radius / 40 : 1)
   
-  // Debug logging for orbit verification
-  if (process.env.NODE_ENV === 'development' && progress % 0.1 < 0.01) {
-    console.log(`🌍 Orbit Progress: ${(progress * 100).toFixed(1)}% | ` +
-      `Segment: ${currentSegment?.id || 'none'} | ` +
-      `Camera: (${responsiveX.toFixed(2)}, ${responsiveY.toFixed(2)}, ${responsiveZ.toFixed(2)}) | ` +
-      `Device: ${mobile ? 'Mobile' : 'Desktop'}`)
+  // Reduced debug logging for orbit verification
+  if (process.env.NODE_ENV === 'development' && progress % 0.25 < 0.01) {
+    console.log(`🌍 Orbit: ${(progress * 100).toFixed(0)}% | ${currentSegment?.id || 'none'} | (${responsiveX.toFixed(1)}, ${responsiveY.toFixed(1)}, ${responsiveZ.toFixed(1)})`)
   }
   
   return {
@@ -196,16 +193,23 @@ export default function ScrollAnimation({
 }: ScrollAnimationProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const timelineRef = useRef<gsap.core.Timeline | null>(null)
+  const callbacksRef = useRef({ onScrollProgress, onCameraUpdate, onFeatureUpdate })
+  
+  // Update callbacks ref without triggering re-render
+  useEffect(() => {
+    callbacksRef.current = { onScrollProgress, onCameraUpdate, onFeatureUpdate }
+  })
 
   useEffect(() => {
     if (!containerRef.current) return
 
-    // Kill existing timeline
+    // Kill existing timeline and all ScrollTriggers
     if (timelineRef.current) {
       timelineRef.current.kill()
     }
+    ScrollTrigger.getAll().forEach(trigger => trigger.kill())
 
-    console.log('🚀 Initializing enhanced ScrollTrigger with 360-degree orbit...')
+    console.log('🚀 Initializing ScrollTrigger...')
 
     // Create master GSAP timeline with scroll-driven animation
     const timeline = gsap.timeline({
@@ -213,12 +217,16 @@ export default function ScrollAnimation({
         trigger: containerRef.current,
         start: 'top top',
         end: 'bottom bottom',
-        scrub: isMobile() ? 0.5 : 0.3, // Smoother scrubbing for mobile
-        pin: false, // Disable pinning to avoid scroll issues
-        markers: process.env.NODE_ENV === 'development', // Debug markers in development
+        scrub: isMobile() ? 0.8 : 0.5, // Adjust scrub value for better performance
+        pin: false,
+        markers: false, // Disable markers to reduce console noise
+        invalidateOnRefresh: true,
         onUpdate: (self) => {
           const progress = self.progress
-          console.log(`📊 ScrollTrigger Progress: ${(progress * 100).toFixed(1)}%`)
+          
+          // Use callback refs to avoid dependency issues
+          const { onScrollProgress, onCameraUpdate, onFeatureUpdate } = callbacksRef.current
+          
           onScrollProgress(progress)
           
           // Calculate camera position for continuous 360-degree orbit
@@ -231,34 +239,11 @@ export default function ScrollAnimation({
           )
           
           onFeatureUpdate(activeSegment || null)
-          
-          // Enhanced debugging for orbit verification
-          if (process.env.NODE_ENV === 'development' && progress % 0.2 < 0.01) {
-            const currentSegmentIndex = featureSegments.findIndex(segment => 
-              progress >= segment.startProgress && progress < segment.endProgress
-            )
-            const currentSegment = featureSegments[currentSegmentIndex]
-            const mobile = isMobile()
-            
-            console.log(`🌍 Orbit Progress: ${(progress * 100).toFixed(1)}% | ` +
-              `Active Segment: ${currentSegment?.id || 'none'} | ` +
-              `Camera: (${cameraPosition.x.toFixed(2)}, ${cameraPosition.y.toFixed(2)}, ${cameraPosition.z.toFixed(2)}) | ` +
-              `Device: ${mobile ? 'Mobile' : 'Desktop'}`)
-          }
-        },
-
-        onRefresh: () => {
-          console.log('🔄 ScrollTrigger refreshed')
-        },
-        onRefreshInit: () => {
-          console.log('🔄 ScrollTrigger refresh initialized')
         }
       }
     })
 
-    console.log('✅ Enhanced ScrollTrigger timeline created')
-
-    // Add timeline labels for each feature segment with marker animations
+    // Add timeline labels for each feature segment
     featureSegments.forEach((segment, index) => {
       const label = `feature-${segment.id}`
       timeline.addLabel(label, segment.startProgress)
@@ -275,6 +260,7 @@ export default function ScrollAnimation({
     })
 
     timelineRef.current = timeline
+    console.log('✅ ScrollTrigger initialized')
 
     return () => {
       if (timelineRef.current) {
@@ -282,7 +268,7 @@ export default function ScrollAnimation({
       }
       ScrollTrigger.getAll().forEach(trigger => trigger.kill())
     }
-  }, [onScrollProgress, onCameraUpdate, onFeatureUpdate])
+  }, []) // Remove dependencies that cause re-renders
 
   return (
     <div 

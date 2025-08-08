@@ -1,10 +1,38 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { Text, Billboard } from '@react-three/drei'
 import * as THREE from 'three'
 import { featureSegments, FeatureSegment } from './ScrollAnimation'
+
+// Utility function to calculate dynamic marker position relative to camera
+function calculateMarkerPosition(
+  basePosition: [number, number, number], 
+  camera: THREE.Camera,
+  offset: THREE.Vector3 = new THREE.Vector3(0, 0.2, 0)
+): THREE.Vector3 {
+  const markerPos = new THREE.Vector3(...basePosition)
+  
+  // Calculate camera direction for optimal marker positioning
+  const cameraDirection = new THREE.Vector3()
+  camera.getWorldDirection(cameraDirection)
+  
+  // Apply minimal offset for visibility while keeping markers close to features
+  // Add a small offset towards camera for better visibility
+  const cameraOffset = cameraDirection.clone().multiplyScalar(-0.05) // Very small offset towards camera
+  const finalPosition = markerPos.clone().add(offset).add(cameraOffset)
+  
+  return finalPosition
+}
+
+// Function to update marker orientation to face camera
+function updateMarkerOrientation(markerRef: React.RefObject<THREE.Group | null>, camera: THREE.Camera): void {
+  if (markerRef.current && camera) {
+    // Make the marker face the camera for better visibility
+    markerRef.current.lookAt(camera.position)
+  }
+}
 
 interface FeatureMarkerProps {
   segment: FeatureSegment
@@ -19,16 +47,36 @@ function FeatureMarker({ segment, isActive, markerOpacity, panelOpacity, onHover
   const dotRef = useRef<THREE.Mesh>(null)
   const glowRef = useRef<THREE.Mesh>(null)
   const [hovered, setHovered] = useState(false)
+  const { camera } = useThree()
 
   useFrame((state) => {
-    if (markerRef.current) {
-      // Subtle floating animation
-      const time = state.clock.elapsedTime
-      const floatIntensity = isActive ? 0.08 : 0.03
-      markerRef.current.position.y = segment.markerPosition[1] + Math.sin(time * 1.5 + segment.markerPosition[0]) * floatIntensity
+    if (markerRef.current && camera) {
+      // Calculate dynamic position close to the feature component
+      const dynamicPosition = calculateMarkerPosition(
+        segment.markerPosition, 
+        camera,
+        new THREE.Vector3(0, 0.15, 0) // Minimal vertical offset for visibility
+      )
       
-      // Gentle scale animation based on activity and hover
-      const targetScale = isActive ? (hovered ? 1.2 : 1.0) : 0.6
+      // Subtle floating animation - keep close to base position
+      const time = state.clock.elapsedTime
+      const floatIntensity = isActive ? 0.05 : 0.02 // Reduced float intensity
+      const floatOffset = Math.sin(time * 1.5 + segment.markerPosition[0]) * floatIntensity
+      
+      // Update position to stay close to feature component
+      markerRef.current.position.copy(dynamicPosition)
+      markerRef.current.position.y += floatOffset
+      
+      // Update marker orientation to face camera for better visibility
+      updateMarkerOrientation(markerRef, camera)
+      
+      // Calculate distance-based scale for better visibility at different camera distances
+      const distanceToCamera = camera.position.distanceTo(markerRef.current.position)
+      const distanceScale = Math.min(1.2, Math.max(0.8, 4 / distanceToCamera)) // Scale based on distance
+      
+      // Gentle scale animation based on activity, hover, and distance
+      const baseScale = isActive ? (hovered ? 1.2 : 1.0) : 0.6
+      const targetScale = baseScale * distanceScale
       markerRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.08)
     }
 
@@ -62,7 +110,6 @@ function FeatureMarker({ segment, isActive, markerOpacity, panelOpacity, onHover
   return (
     <group
       ref={markerRef}
-      position={segment.markerPosition}
       onPointerOver={handlePointerOver}
       onPointerOut={handlePointerOut}
     >
@@ -102,13 +149,28 @@ interface DescriptionPanelProps {
 function DescriptionPanel({ segment, isActive, panelOpacity, isHovered, isMobile = false }: DescriptionPanelProps) {
   const panelRef = useRef<THREE.Group>(null)
   const backgroundRef = useRef<THREE.Mesh>(null)
+  const { camera } = useThree()
 
   useFrame((state) => {
-    if (panelRef.current) {
+    if (panelRef.current && camera) {
+      // Calculate dynamic position close to the marker but offset for panel visibility
+      const markerPosition = calculateMarkerPosition(
+        segment.markerPosition, 
+        camera,
+        new THREE.Vector3(0, 0.15, 0)
+      )
+      
       // Subtle floating animation
       const time = state.clock.elapsedTime
       const floatIntensity = isMobile ? 0.03 : 0.06
-      panelRef.current.position.y = segment.markerPosition[1] + 1.2 + Math.sin(time * 1.2) * floatIntensity
+      const floatOffset = Math.sin(time * 1.2) * floatIntensity
+      
+      // Position panel relative to marker position with dynamic offset
+      const [offsetX, offsetY, offsetZ] = panelOffset
+      panelRef.current.position.copy(markerPosition)
+      panelRef.current.position.x += offsetX
+      panelRef.current.position.y += 1.2 + floatOffset + offsetY
+      panelRef.current.position.z += offsetZ
       
       // Gentle scale animation with smooth transitions
       const targetScale = (isActive && (isHovered || panelOpacity > 0.5)) ? 1.0 : 0
@@ -123,30 +185,26 @@ function DescriptionPanel({ segment, isActive, panelOpacity, isHovered, isMobile
     }
   })
 
-  // Elegant panel positioning
-  const getPanelPosition = (): [number, number, number] => {
-    const baseX = segment.markerPosition[0]
-    const baseY = segment.markerPosition[1] + 1.2
-    const baseZ = segment.markerPosition[2]
-    
-    // Simple positioning to avoid overlap
+  // Dynamic panel positioning relative to camera
+  const getDynamicPanelOffset = (): [number, number, number] => {
+    // Calculate camera-relative offset for panel positioning
     let offsetX = 1.5
-    if (baseX > 0) {
+    if (segment.markerPosition[0] > 0) {
       offsetX = 1.5 // Right side
-    } else if (baseX < 0) {
+    } else if (segment.markerPosition[0] < 0) {
       offsetX = -1.5 // Left side
     } else {
       // Center markers - alternate left/right
       offsetX = segment.id.includes('display') || segment.id.includes('strap') ? 1.5 : -1.5
     }
     
-    return [baseX + offsetX, baseY, baseZ]
+    return [offsetX, 0, 0]
   }
 
-  const panelPosition = getPanelPosition()
+  const panelOffset = getDynamicPanelOffset()
 
   return (
-    <Billboard position={panelPosition}>
+    <Billboard>
       <group ref={panelRef}>
         {/* Clean background panel */}
         <mesh ref={backgroundRef} position={[0, 0, -0.01]}>
