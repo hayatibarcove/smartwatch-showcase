@@ -1,6 +1,8 @@
 'use client'
 
 import { FeatureSegment, featureSegments } from './ScrollAnimation'
+import { useState, useCallback } from 'react'
+import OverlayDrawer from './OverlayDrawer'
 
 interface UIOverlayProps {
   scrollProgress: number
@@ -8,8 +10,13 @@ interface UIOverlayProps {
 }
 
 export default function UIOverlay({ scrollProgress, activeFeature }: UIOverlayProps) {
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const openDrawer = useCallback(() => setIsDrawerOpen(true), [])
+  const closeDrawer = useCallback(() => setIsDrawerOpen(false), [])
   return (
     <div className="fixed inset-0 pointer-events-none z-10">
+      {/* Drawer component (higher z-index than overlay UI) */}
+      <OverlayDrawer isOpen={isDrawerOpen} onClose={closeDrawer} />
       {/* Logo */}
       <div className="absolute top-6 left-1/2 -translate-x-1/2 md:left-6 md:translate-x-0 pointer-events-auto text-center md:text-left">
         <h1 className="text-2xl font-bold text-white tracking-wider">
@@ -251,7 +258,10 @@ export default function UIOverlay({ scrollProgress, activeFeature }: UIOverlayPr
           <div className="bg-black/90 backdrop-blur-xl rounded-2xl p-8 border-2 border-[#D4AF37] shadow-2xl mx-6 md:mx-0">
             <h3 className="text-2xl font-bold text-white mb-4">Experience the Future</h3>
             <p className="text-[#AAAAAA] mb-6">Ready to upgrade your lifestyle?</p>
-            <button className="bg-[#D4AF37] text-[#0E0E0E] px-8 py-3 rounded-full font-semibold hover:bg-[#FFD700] transition-colors duration-300 pointer-events-auto">
+            <button
+              onClick={openDrawer}
+              className="bg-[#D4AF37] text-[#0E0E0E] px-8 py-3 rounded-full font-semibold hover:bg-[#FFD700] transition-colors duration-300 pointer-events-auto"
+            >
               Get Your Watch
             </button>
           </div>
