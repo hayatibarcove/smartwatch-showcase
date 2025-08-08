@@ -37,12 +37,11 @@ function updateMarkerOrientation(markerRef: React.RefObject<THREE.Group | null>,
 interface FeatureMarkerProps {
   segment: FeatureSegment
   isActive: boolean
-  markerOpacity: number
-  panelOpacity: number
+  focusIntensity: number
   onHover: (hovered: boolean) => void
 }
 
-function FeatureMarker({ segment, isActive, markerOpacity, panelOpacity, onHover }: FeatureMarkerProps) {
+function FeatureMarker({ segment, isActive, focusIntensity, onHover }: FeatureMarkerProps) {
   const markerRef = useRef<THREE.Group>(null)
   const dotRef = useRef<THREE.Mesh>(null)
   const glowRef = useRef<THREE.Mesh>(null)
@@ -76,29 +75,34 @@ function FeatureMarker({ segment, isActive, markerOpacity, panelOpacity, onHover
       
       // Gentle scale animation based on activity, hover, and distance
       const baseScale = isActive ? (hovered ? 1.2 : 1.0) : 0.6
-      const targetScale = baseScale * distanceScale
+      const targetScale = baseScale * distanceScale * (focusIntensity > 0 ? 1 : 0)
       markerRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.08)
     }
 
     // Elegant glow animation for active markers
-    if (glowRef.current && isActive) {
+    if (glowRef.current) {
       const glowIntensity = 0.3 + Math.sin(state.clock.elapsedTime * 2) * 0.2
       const material = glowRef.current.material as THREE.MeshBasicMaterial
-      material.opacity = markerOpacity * glowIntensity * (hovered ? 1.5 : 1.0)
+      // Only show glow when focused
+      material.opacity = focusIntensity * glowIntensity * (hovered ? 1.5 : 1.0)
     }
 
     // Subtle dot emissive animation
     if (dotRef.current) {
       const material = dotRef.current.material as THREE.MeshStandardMaterial
+      // Only show dot when focused
+      material.opacity = focusIntensity
       const emissiveIntensity = isActive ? (hovered ? 0.8 : 0.4) : 0.1
-      material.emissiveIntensity = emissiveIntensity
+      material.emissiveIntensity = emissiveIntensity * focusIntensity
     }
   })
 
   const handlePointerOver = () => {
-    setHovered(true)
-    onHover(true)
-    document.body.style.cursor = 'pointer'
+    if (focusIntensity > 0) {
+      setHovered(true)
+      onHover(true)
+      document.body.style.cursor = 'pointer'
+    }
   }
 
   const handlePointerOut = () => {
@@ -141,12 +145,12 @@ function FeatureMarker({ segment, isActive, markerOpacity, panelOpacity, onHover
 interface DescriptionPanelProps {
   segment: FeatureSegment
   isActive: boolean
-  panelOpacity: number
+  focusIntensity: number
   isHovered: boolean
   isMobile?: boolean
 }
 
-function DescriptionPanel({ segment, isActive, panelOpacity, isHovered, isMobile = false }: DescriptionPanelProps) {
+function DescriptionPanel({ segment, isActive, focusIntensity, isHovered, isMobile = false }: DescriptionPanelProps) {
   const panelRef = useRef<THREE.Group>(null)
   const backgroundRef = useRef<THREE.Mesh>(null)
   const { camera } = useThree()
@@ -173,7 +177,7 @@ function DescriptionPanel({ segment, isActive, panelOpacity, isHovered, isMobile
       panelRef.current.position.z += offsetZ
       
       // Gentle scale animation with smooth transitions
-      const targetScale = (isActive && (isHovered || panelOpacity > 0.5)) ? 1.0 : 0
+      const targetScale = (isActive && (isHovered || focusIntensity > 0.5)) ? 1.0 : 0
       const lerpSpeed = isMobile ? 0.08 : 0.12
       panelRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), lerpSpeed)
     }
@@ -181,7 +185,7 @@ function DescriptionPanel({ segment, isActive, panelOpacity, isHovered, isMobile
     // Subtle background animation
     if (backgroundRef.current) {
       const material = backgroundRef.current.material as THREE.MeshBasicMaterial
-      material.opacity = panelOpacity * (isHovered ? 0.9 : 0.7)
+      material.opacity = focusIntensity * (isHovered ? 0.9 : 0.7)
     }
   })
 
@@ -222,39 +226,43 @@ function DescriptionPanel({ segment, isActive, panelOpacity, isHovered, isMobile
           <meshBasicMaterial 
             color="#D4AF37"
             transparent
-            opacity={panelOpacity * 0.3}
+            opacity={focusIntensity * 0.3}
           />
         </mesh>
 
         {/* Clean title */}
-        <Text
-          position={[0, 0.25, 0]}
-          fontSize={0.12}
-          maxWidth={2.4}
-          lineHeight={1}
-          letterSpacing={0.02}
-          textAlign="center"
-          color="#ffffff"
-          anchorX="center"
-          anchorY="middle"
-        >
-          {segment.title}
-        </Text>
+        {focusIntensity > 0 && (
+          <Text
+            position={[0, 0.25, 0]}
+            fontSize={0.12}
+            maxWidth={2.4}
+            lineHeight={1}
+            letterSpacing={0.02}
+            textAlign="center"
+            color={`rgba(255, 255, 255, ${focusIntensity})`}
+            anchorX="center"
+            anchorY="middle"
+          >
+            {segment.title}
+          </Text>
+        )}
 
         {/* Elegant description */}
-        <Text
-          position={[0, -0.15, 0]}
-          fontSize={0.08}
-          maxWidth={2.4}
-          lineHeight={1.2}
-          letterSpacing={0.01}
-          textAlign="center"
-          color="#AAAAAA"
-          anchorX="center"
-          anchorY="middle"
-        >
-          {segment.description}
-        </Text>
+        {focusIntensity > 0 && (
+          <Text
+            position={[0, -0.15, 0]}
+            fontSize={0.08}
+            maxWidth={2.4}
+            lineHeight={1.2}
+            letterSpacing={0.01}
+            textAlign="center"
+            color={`rgba(170, 170, 170, ${focusIntensity})`}
+            anchorX="center"
+            anchorY="middle"
+          >
+            {segment.description}
+          </Text>
+        )}
 
         {/* Minimalist indicator dot */}
         <mesh position={[0, -0.45, 0]}>
@@ -262,7 +270,7 @@ function DescriptionPanel({ segment, isActive, panelOpacity, isHovered, isMobile
           <meshBasicMaterial 
             color="#D4AF37"
             transparent
-            opacity={panelOpacity}
+            opacity={focusIntensity}
           />
         </mesh>
       </group>
@@ -306,43 +314,31 @@ export default function EnhancedFeatureMarkers({ scrollProgress, activeFeature }
         const isActive = activeFeature?.id === segment.id
         const isHovered = hoveredFeature === segment.id
         
-        // Enhanced opacity calculation based on scroll progress and activity
+        // Calculate focus intensity based on active state and scroll progress
+        // This is the key change - markers are only visible when they're the active feature
         const segmentProgress = Math.max(0, Math.min(1, 
           (scrollProgress - segment.startProgress) / (segment.endProgress - segment.startProgress)
         ))
         
-        // Enhanced marker visibility logic for 360-degree orbit
-        const markerOpacity = isActive ? 1 : 
-          (scrollProgress >= segment.startProgress && scrollProgress <= segment.endProgress) ? 
-          Math.sin(segmentProgress * Math.PI) * 0.8 : 0.2
-
-        // Enhanced panel visibility logic with better timing for orbit experience
-        const panelOpacity = isMobile 
-          ? (isActive && segmentProgress > 0.2 ? 1 : 0)
-          : (isActive && (isHovered || segmentProgress > 0.3) ? 1 : 0)
-        
-        // Enhanced orbit-specific visibility for better user experience
-        const isInOrbitRange = scrollProgress >= segment.startProgress - 0.05 && 
-                              scrollProgress <= segment.endProgress + 0.05
-        
-        const orbitAdjustedOpacity = isInOrbitRange ? markerOpacity : markerOpacity * 0.4
+        // Focus intensity determines visibility - starts at 0 (transparent) and increases to 1 (fully visible)
+        // Only the active feature gets focus intensity > 0
+        const focusIntensity = isActive ? 
+          Math.sin(Math.min(segmentProgress * 2, 1) * Math.PI/2) : 0
         
         return (
           <group key={segment.id}>
             <FeatureMarker
               segment={segment}
               isActive={isActive}
-              markerOpacity={orbitAdjustedOpacity}
-              panelOpacity={panelOpacity}
+              focusIntensity={focusIntensity}
               onHover={(hovered) => handleHover(segment.id, hovered)}
             />
             
-            {/* Enhanced 3D panels with better performance handling */}
             {/* {!isMobile && (
               <DescriptionPanel
                 segment={segment}
                 isActive={isActive}
-                panelOpacity={panelOpacity}
+                focusIntensity={focusIntensity}
                 isHovered={isHovered}
                 isMobile={isMobile}
               />

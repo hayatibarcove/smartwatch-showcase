@@ -19,7 +19,7 @@ export default function UIOverlay({ scrollProgress, activeFeature }: UIOverlayPr
       </div>
       
       {/* Menu */}
-      <div className="absolute top-6 right-6 pointer-events-auto">
+      {/* <div className="absolute top-6 right-6 pointer-events-auto">
         <nav className="flex space-x-6">
           <a href="#features" className="text-white hover:text-[#D4AF37] transition-colors duration-300">
             Features
@@ -28,7 +28,7 @@ export default function UIOverlay({ scrollProgress, activeFeature }: UIOverlayPr
             Specs
           </a>
         </nav>
-      </div>
+      </div> */}
       
       {/* Enhanced Progress Bar with Feature Segments */}
       <div className="absolute left-6 top-1/2 -translate-y-1/2 hidden md:block">
