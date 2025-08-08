@@ -185,8 +185,10 @@ function CameraController({ cameraPosition }: { cameraPosition: CameraPosition }
     camera.position.lerp(targetPosition.current, 0.12) // Optimized for smooth orbit
     
     // Always look at the watch center with enhanced focus
+    // On mobile, aim slightly downward so the model sits centered in view
+    const lookAtXOffset = mobile ? -0.12 : 0
     targetLookAt.current.set(
-      cameraPosition.lookAtX || 0,
+      (cameraPosition.lookAtX || 0) + lookAtXOffset,
       cameraPosition.lookAtY || 0,
       cameraPosition.lookAtZ || 0
     )

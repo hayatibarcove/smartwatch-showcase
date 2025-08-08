@@ -83,6 +83,26 @@ html {
 
 /* Mobile optimizations */
 @media (max-width: 768px) {
+  /* Disable native page scrolling on mobile; gestures are handled manually */
+  html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    touch-action: none;
+  }
+
+  /* Fullscreen fixed canvas container */
+  #canvasContainer,
+  canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    display: block;
+  }
+
   /* Improve touch targets */
   button, a {
     min-height: 44px;
@@ -98,6 +118,21 @@ html {
   * {
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
+  }
+}
+
+/* Desktop/tablet: keep normal scrolling/layout */
+@media (min-width: 769px) {
+  html, body {
+    overflow: auto;
+    touch-action: auto;
+  }
+
+  #canvasContainer,
+  canvas {
+    position: relative;
+    width: 100%;
+    height: 100%;
   }
 }
 

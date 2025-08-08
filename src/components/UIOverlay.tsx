@@ -11,7 +11,7 @@ export default function UIOverlay({ scrollProgress, activeFeature }: UIOverlayPr
   return (
     <div className="fixed inset-0 pointer-events-none z-10">
       {/* Logo */}
-      <div className="absolute top-6 left-6 pointer-events-auto">
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 md:left-6 md:translate-x-0 pointer-events-auto text-center md:text-left">
         <h1 className="text-2xl font-bold text-white tracking-wider">
           SMARTWATCH
           <span className="text-[#D4AF37]">PRO</span>
@@ -77,7 +77,7 @@ export default function UIOverlay({ scrollProgress, activeFeature }: UIOverlayPr
       </div>
 
       {/* Mobile Progress Bar (Horizontal) */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 w-48 md:hidden">
+      <div className="absolute top-16 left-1/2 -translate-x-1/2 w-48 md:hidden">
         <div className="relative">
           <div className="h-1 bg-[#2E2E2E] rounded-full overflow-hidden backdrop-blur-sm">
             <div 
@@ -198,7 +198,8 @@ export default function UIOverlay({ scrollProgress, activeFeature }: UIOverlayPr
       </div>)}
 
       {/* Mobile Feature Display */}
-      <div className="absolute bottom-6 left-6 right-6 md:hidden">
+      {scrollProgress >= 0.05 && (
+        <div className="absolute bottom-6 left-6 right-6 md:hidden">
         {activeFeature ? (
           <div className="glass-effect rounded-xl p-4 transition-all duration-500">
             <div className="flex items-center mb-2">
@@ -213,19 +214,20 @@ export default function UIOverlay({ scrollProgress, activeFeature }: UIOverlayPr
               {Math.round(scrollProgress * 100)}% complete
             </div>
           </div>
-        ) : (
-          <div className="glass-effect rounded-xl p-4 transition-all duration-500">
-            <h2 className="text-lg font-semibold text-white mb-1">Smart Watch Pro</h2>
-            <p className="text-[#AAAAAA] text-sm">Experience the future of wearable technology with cutting-edge features and elegant design.</p>
-            <div className="mt-2 text-xs text-[#AAAAAA]">
-              Scroll to explore the 360° showcase
+          ) : (
+            <div className="glass-effect rounded-xl p-4 transition-all duration-500">
+              <h2 className="text-lg font-semibold text-white mb-1">Smart Watch Pro</h2>
+              <p className="text-[#AAAAAA] text-sm">Experience the future of wearable technology with cutting-edge features and elegant design.</p>
+              <div className="mt-2 text-xs text-[#AAAAAA]">
+                Scroll to explore the 360° showcase
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Feature Navigation Dots (Mobile-friendly) */}
-      <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex space-x-3 md:hidden">
+      {/* <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex space-x-3 md:hidden">
         {featureSegments
           .filter(segment => !['return-front', 'return-front-2'].includes(segment.id)) // Filter out return-front segment
           .map((segment, index) => {
@@ -241,12 +243,12 @@ export default function UIOverlay({ scrollProgress, activeFeature }: UIOverlayPr
             />
           )
         })}
-      </div>
+      </div> */}
 
       {/* Final CTA (appears at end) */}
       {scrollProgress === 1 && (
-        <div className="absolute top-1/2 right-6 max-w-md animate-fade-in text-center">
-          <div className="glass-effect-gold rounded-2xl p-8 backdrop-blur-lg border border-[#D4AF37] shadow-2xl">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full md:w-auto md:right-6 md:left-auto md:translate-x-0 md:translate-y-0 md:max-w-md animate-fade-in text-center">
+          <div className="glass-effect-gold rounded-2xl p-8 backdrop-blur-lg border border-[#D4AF37] shadow-2xl mx-6 md:mx-0">
             <h3 className="text-2xl font-bold text-white mb-4">Experience the Future</h3>
             <p className="text-[#AAAAAA] mb-6">Ready to upgrade your lifestyle?</p>
             <button className="bg-[#D4AF37] text-[#0E0E0E] px-8 py-3 rounded-full font-semibold hover:bg-[#FFD700] transition-colors duration-300 pointer-events-auto">

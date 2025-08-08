@@ -43,12 +43,12 @@ export const featureSegments: FeatureSegment[] = [
     cameraPosition: { x: 0, y: 0, z: 5, lookAtX: 0, lookAtY: 0, lookAtZ: 0 }
   },
   {
-    id: 'usb-slot',
-    title: 'USB-C Charging Slot',
-    description: 'USB-C charging slot with seamless integration for efficient and secure docking.',
+    id: 'sim-slot',
+    title: 'SIM Card Slot',
+    description: 'Dedicated SIM card slot for cellular connectivity and network access.',
     startProgress: 0.2,
     endProgress: 0.35,
-    markerPosition: [0.55, -0.2, 0], // Close to right side where USB typically is
+    markerPosition: [0.55, -0.2, 0], // Close to right side where SIM slot typically is
     markerColor: '#D4AF37',
     cameraPosition: { x: 5, y: 0, z: 0, lookAtX: 0, lookAtY: 0, lookAtZ: 0 }
   },
@@ -211,37 +211,111 @@ export default function ScrollAnimation({
 
     console.log('🚀 Initializing ScrollTrigger...')
 
+    // Mobile: set up virtual scroll with scrollerProxy and pinning
+    const mobile = isMobile()
+    let removeListeners: (() => void) | null = null
+    let maxVirtualScroll = window.innerHeight * 10
+    let virtualScrollTop = 0
+
+    if (mobile) {
+      const scrollerEl = containerRef.current
+      // scrollerProxy bound to our container element
+      ScrollTrigger.scrollerProxy(scrollerEl, {
+        scrollTop(value?: number) {
+          if (typeof value === 'number') {
+            virtualScrollTop = Math.max(0, Math.min(maxVirtualScroll, value))
+            ScrollTrigger.update()
+          }
+          return virtualScrollTop
+        },
+        getBoundingClientRect() {
+          return { top: 0, left: 0, width: window.innerWidth, height: window.innerHeight } as DOMRect
+        },
+        pinType: 'fixed'
+      })
+
+      const handleResize = () => {
+        maxVirtualScroll = window.innerHeight * 10
+        ScrollTrigger.refresh()
+      }
+
+      let touchStartY = 0
+      let lastTouchY = 0
+
+      const setVirtualScroll = (next: number) => {
+        virtualScrollTop = Math.max(0, Math.min(maxVirtualScroll, next))
+        // Let ScrollTrigger read new value
+        ScrollTrigger.update()
+      }
+
+      const onWheel = (e: WheelEvent) => {
+        e.preventDefault()
+        setVirtualScroll(virtualScrollTop + e.deltaY)
+      }
+      const onTouchStart = (e: TouchEvent) => {
+        if (!e.touches || e.touches.length === 0) return
+        touchStartY = e.touches[0].clientY
+        lastTouchY = touchStartY
+      }
+      const onTouchMove = (e: TouchEvent) => {
+        e.preventDefault()
+        if (!e.touches || e.touches.length === 0) return
+        const currentY = e.touches[0].clientY
+        const deltaY = lastTouchY - currentY
+        lastTouchY = currentY
+        setVirtualScroll(virtualScrollTop + deltaY)
+      }
+      const onTouchEnd = () => {}
+
+      // Attach non-passive to allow preventDefault
+      scrollerEl.addEventListener('wheel', onWheel, { passive: false })
+      scrollerEl.addEventListener('touchstart', onTouchStart, { passive: false })
+      scrollerEl.addEventListener('touchmove', onTouchMove, { passive: false })
+      scrollerEl.addEventListener('touchend', onTouchEnd, { passive: false })
+      window.addEventListener('resize', handleResize)
+
+      removeListeners = () => {
+        scrollerEl.removeEventListener('wheel', onWheel as EventListener)
+        scrollerEl.removeEventListener('touchstart', onTouchStart as EventListener)
+        scrollerEl.removeEventListener('touchmove', onTouchMove as EventListener)
+        scrollerEl.removeEventListener('touchend', onTouchEnd as EventListener)
+        window.removeEventListener('resize', handleResize)
+      }
+    }
+
     // Create master GSAP timeline with scroll-driven animation
     const timeline = gsap.timeline({
       scrollTrigger: {
         trigger: containerRef.current,
         start: 'top top',
-        end: 'bottom bottom',
-        scrub: isMobile() ? 0.8 : 0.5, // Adjust scrub value for better performance
-        pin: false,
-        markers: false, // Disable markers to reduce console noise
+        end: mobile ? () => '+=' + (window.innerHeight * 10) : 'bottom bottom',
+        scrub: mobile ? 0.8 : 0.5,
+        pin: mobile ? true : false,
+        anticipatePin: mobile ? 1 : 0,
+        scroller: mobile ? containerRef.current! : undefined,
+        markers: false,
         invalidateOnRefresh: true,
         onUpdate: (self) => {
           const progress = self.progress
-          
-          // Use callback refs to avoid dependency issues
+
           const { onScrollProgress, onCameraUpdate, onFeatureUpdate } = callbacksRef.current
-          
           onScrollProgress(progress)
-          
-          // Calculate camera position for continuous 360-degree orbit
+
           const cameraPosition = calculateCameraPosition(progress)
           onCameraUpdate(cameraPosition)
-          
-          // Find active feature segment (excluding return-front)
+
           const activeSegment = featureSegments.find(segment => 
             progress >= segment.startProgress && progress < segment.endProgress && !['return-front', 'return-front-2'].includes(segment.id)
           )
-          
           onFeatureUpdate(activeSegment || null)
         }
       }
     })
+
+    if (mobile) {
+      // Ensure measurements and pinning are recalculated for fixed container
+      ScrollTrigger.refresh()
+    }
 
     // Add timeline labels for each feature segment
     featureSegments.forEach((segment, index) => {
@@ -266,26 +340,30 @@ export default function ScrollAnimation({
       if (timelineRef.current) {
         timelineRef.current.kill()
       }
+      if (removeListeners) removeListeners()
       ScrollTrigger.getAll().forEach(trigger => trigger.kill())
     }
   }, []) // Remove dependencies that cause re-renders
 
   return (
     <div 
-      ref={containerRef} 
-      className="relative w-full" 
+      ref={containerRef}
+      id="canvasContainer"
+      className="relative w-full"
       style={{ 
-        touchAction: 'pan-y'
+        touchAction: isMobile() ? 'none' : 'pan-y'
       }}
     >
       {children}
       
-      {/* Invisible scroll sections to create scrollable height */}
-      <div className="relative z-0">
-        {Array.from({ length: 20 }, (_, i) => (
-          <div key={i} className="h-screen opacity-0" />
-        ))}
-      </div>
+      {/* Invisible scroll sections to create scrollable height (desktop/tablet only) */}
+      {!isMobile() && (
+        <div className="relative z-0">
+          {Array.from({ length: 20 }, (_, i) => (
+            <div key={i} className="h-screen opacity-0" />
+          ))}
+        </div>
+      )}
       
     </div>
   )
