@@ -247,8 +247,8 @@ export default function UIOverlay({ scrollProgress, activeFeature }: UIOverlayPr
 
       {/* Final CTA (appears at end) */}
       {scrollProgress === 1 && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full md:w-auto md:right-6 md:left-auto md:translate-x-0 md:translate-y-0 md:max-w-md animate-fade-in text-center">
-          <div className="glass-effect-gold rounded-2xl p-8 backdrop-blur-lg border border-[#D4AF37] shadow-2xl mx-6 md:mx-0">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full md:w-auto md:right-2 md:left-auto md:translate-x-0 md:translate-y-0 md:max-w-md animate-fade-in text-center">
+          <div className="bg-black/90 backdrop-blur-xl rounded-2xl p-8 border-2 border-[#D4AF37] shadow-2xl mx-6 md:mx-0">
             <h3 className="text-2xl font-bold text-white mb-4">Experience the Future</h3>
             <p className="text-[#AAAAAA] mb-6">Ready to upgrade your lifestyle?</p>
             <button className="bg-[#D4AF37] text-[#0E0E0E] px-8 py-3 rounded-full font-semibold hover:bg-[#FFD700] transition-colors duration-300 pointer-events-auto">
