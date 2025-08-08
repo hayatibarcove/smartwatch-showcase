@@ -121,7 +121,7 @@ export default function UIOverlay({ scrollProgress, activeFeature }: UIOverlayPr
       
       {/* Professional scroll hint (visible only at start) */}
       {scrollProgress < 0.05 && (
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 text-center">
+        <div className="absolute bottom-16 md:bottom-12 left-1/2 -translate-x-1/2 text-center">
           {/* Elegant background container */}
           <div className="glass-effect rounded-2xl backdrop-blur-md border border-[#D4AF37]/20">
             {/* Refined typography */}
@@ -206,7 +206,7 @@ export default function UIOverlay({ scrollProgress, activeFeature }: UIOverlayPr
 
       {/* Mobile Feature Display */}
       {scrollProgress >= 0.05 && (
-        <div className="absolute left-6 right-6 md:hidden" style={{ bottom: 'max(6vh, env(safe-area-inset-bottom) + 16px)' }}>
+        <div className="absolute left-6 right-6 md:hidden" style={{ bottom: 'max(10vh, env(safe-area-inset-bottom) + 16px)' }}>
         {activeFeature ? (
           <div className="glass-effect rounded-xl p-4 transition-all duration-500">
             <div className="flex items-center mb-2">
