@@ -86,16 +86,32 @@ export default function OverlayDrawer({
       const previousOverflow = document.body.style.overflow
       document.body.style.overflow = 'hidden'
 
-      // Move focus inside
-      setTimeout(() => {
+      // Move focus inside after the opening transition completes to avoid layout jank during animation
+      const onTransitionEnd = (e: TransitionEvent) => {
+        if (e.propertyName !== 'transform') return
         const focusables = getFocusableElements(drawerEl)
         ;(focusables[0] || drawerEl).focus()
-      }, 0)
+        drawerEl.removeEventListener('transitionend', onTransitionEnd)
+      }
+
+      drawerEl.addEventListener('transitionend', onTransitionEnd)
+
+      // Fallback for reduced motion where the transition may not fire
+      try {
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          const focusables = getFocusableElements(drawerEl)
+          ;(focusables[0] || drawerEl).focus()
+          drawerEl.removeEventListener('transitionend', onTransitionEnd)
+        }
+      } catch (_) {
+        // no-op
+      }
 
       // Cleanup on close
       return () => {
         document.removeEventListener('keydown', handleKeyDown)
         drawerEl.removeEventListener('keydown', onKeyDown)
+        drawerEl.removeEventListener('transitionend', onTransitionEnd)
         document.body.style.overflow = previousOverflow
         if (lastFocusedRef.current) {
           lastFocusedRef.current.focus()
@@ -114,7 +130,7 @@ export default function OverlayDrawer({
         className={`fixed inset-0 z-40 transition-opacity duration-300 ease-out ${
           isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
-        style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        style={{ backgroundColor: 'rgba(0,0,0,0.5)', willChange: 'opacity' }}
         onClick={onClose}
         aria-hidden="true"
       />
@@ -127,10 +143,10 @@ export default function OverlayDrawer({
         aria-labelledby="overlay-drawer-title"
         id="overlay-drawer"
         tabIndex={-1}
-        className={`fixed top-0 right-0 h-full z-50 bg-[#121212] text-white shadow-2xl border-l border-[#D4AF37]/20 w-full sm:w-[35vw] max-w-full p-6 sm:p-8 transform transition-transform duration-500 ease-in-out ${
+        className={`fixed top-0 right-0 h-full z-50 bg-[#121212] text-white border-l border-[#D4AF37]/20 w-full sm:w-[35vw] max-w-full p-6 sm:p-8 transform-gpu will-change-transform transition-transform duration-500 ease-in-out motion-reduce:transition-none motion-reduce:transform-none ${
           isOpen ? 'translate-x-0 pointer-events-auto' : 'translate-x-full pointer-events-none'
         }`}
-        style={{ boxShadow: '0 0 24px rgba(212,175,55,0.15)' }}
+        style={{ willChange: 'transform', contain: 'layout paint' }}
       >
         <div className="flex items-start justify-between mb-6">
           <h2 id="overlay-drawer-title" className="text-2xl font-bold tracking-wide">

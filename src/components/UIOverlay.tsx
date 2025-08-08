@@ -206,7 +206,7 @@ export default function UIOverlay({ scrollProgress, activeFeature }: UIOverlayPr
 
       {/* Mobile Feature Display */}
       {scrollProgress >= 0.05 && (
-        <div className="absolute bottom-6 left-6 right-6 md:hidden">
+        <div className="absolute left-6 right-6 md:hidden" style={{ bottom: 'max(6vh, env(safe-area-inset-bottom) + 16px)' }}>
         {activeFeature ? (
           <div className="glass-effect rounded-xl p-4 transition-all duration-500">
             <div className="flex items-center mb-2">

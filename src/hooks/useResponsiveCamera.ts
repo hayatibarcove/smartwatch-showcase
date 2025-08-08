@@ -13,7 +13,7 @@ export const getResponsiveCameraParams = () => {
   return {
     radius: mobile ? 34 : 40, // Smaller radius on mobile to bring camera closer
     height: mobile ? 9 : 10, // Slightly lower camera height on mobile
-    fov: mobile ? 50 : 40, // Narrower FOV on mobile to avoid zoomed-out look
+    fov: mobile ? 55 : 40, // Narrower FOV on mobile to avoid zoomed-out look
     baseScale: mobile ? 1.0 : 1.0, // Keep consistent scale across devices
   };
 };

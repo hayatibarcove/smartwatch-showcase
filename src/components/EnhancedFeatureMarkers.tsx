@@ -322,8 +322,11 @@ export default function EnhancedFeatureMarkers({ scrollProgress, activeFeature }
         
         // Focus intensity determines visibility - starts at 0 (transparent) and increases to 1 (fully visible)
         // Only the active feature gets focus intensity > 0
-        const focusIntensity = isActive ? 
-          Math.sin(Math.min(segmentProgress * 2, 1) * Math.PI/2) : 0
+        // Mobile requirement: hide markers until user scrolls beyond 0.05
+        const passesMobileThreshold = !isMobile || scrollProgress > 0.05
+        const focusIntensity = passesMobileThreshold && isActive
+          ? Math.sin(Math.min(segmentProgress * 2, 1) * Math.PI / 2)
+          : 0
         
         return (
           <group key={segment.id}>
